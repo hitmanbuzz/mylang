@@ -50,7 +50,7 @@ func (l *Lexer) Tokenize() int {
 // 3rd  -> Literal
 //
 // The 4th return value is the number of indices to skip from the current char.
-func (l *Lexer) MatchToken(currIdx int, currByte byte, nextByte byte, source string) (token.TokenType, byte, string) {
+func (l *Lexer) MatchToken(currIdx int, currByte byte, nextByte byte, source string) (token.TokenKind, byte, string) {
 	switch currByte {
 	case ' ':
 		l.advance(1)
