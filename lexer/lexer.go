@@ -6,133 +6,184 @@ import (
 )
 
 type Lexer struct {
-	tokens []token.Token
-	// store the current lexing line number
-	lineNo   uint
+	tokens   []token.Token
+	CurrIdx  int
+	LineNo   int
+	Source   string
 	ExitCode int
 }
 
 func NewLexer() *Lexer {
 	return &Lexer{
 		tokens:   make([]token.Token, 0),
-		lineNo:   1,
+		CurrIdx:  0,
+		LineNo:   1,
 		ExitCode: 0,
 	}
 }
 
-func (l *Lexer) Tokenize(char string, currIdx uint, str string) uint {
+func (l *Lexer) Tokenize() int {
 	nt := token.Token{
-		Kind:      token.NULL,
-		KindValue: "",
-		Lex:       "",
-		Literal:   "null",
+		Kind:    token.NULL,
+		Lex:     []byte{},
+		Literal: "",
 	}
 
-	nextChar := string(str[currIdx+1])
-	lex, kind, kindValue, jump := l.MatchToken(currIdx, char, nextChar, str)
+	nextByte := l.Source[l.CurrIdx+1]
+	kind, lex, literal := l.MatchToken(l.CurrIdx, l.peek(), nextByte, l.Source)
 	if kind != token.NULL {
-		nt.Lex = lex
+		nt.Lex = append(nt.Lex, lex)
 		nt.Kind = kind
-		nt.KindValue = kindValue
+		nt.Literal = literal
 		l.tokens = append(l.tokens, nt)
 	}
 
-	return jump
+	return l.CurrIdx
 }
 
-// @param:
-//
-// c -> current char
-//
-// nc -> next char
-//
 // @return
 //
-// 1st (string) -> lex
+// 1st -> TokenType
 //
-// 2nd (TokenType) -> TokenType
+// 2nd  -> Lex
 //
-// 3rd (uint) -> Jump Amount
+// 3rd  -> Literal
 //
-// The 3rd return value is the number of indices to skip from the current char.
-// Default is always 1
-func (l *Lexer) MatchToken(currIdx uint, c, nc, str string) (string, token.TokenType, string, uint) {
-	switch c {
-	// skip if it is whitespace
-	case " ":
-		return c, token.NULL, "", 1
-	// count the line number with \n
-	case "\n":
-		l.lineNo += 1
-		return c, token.NULL, "", 1
-	case "(":
-		return c, token.LEFT_PAREN, "LEFT_PAREN", 1
-	case ")":
-		return c, token.RIGHT_PAREN, "RIGHT_PAREN", 1
-	case "{":
-		return c, token.LEFT_BRACE, "LEFT_BRACE", 1
-	case "}":
-		return c, token.RIGHT_BRACE, "RIGHT_BRACE", 1
-	case ",":
-		return c, token.COMMA, "COMMA", 1
-	case ".":
-		return c, token.DOT, "DOT", 1
-	case "=":
-		if nc == "=" {
-			return "==", token.EQUAL_EQUAL, "EQUAL_EQUAL", 2
+// The 4th return value is the number of indices to skip from the current char.
+func (l *Lexer) MatchToken(currIdx int, currByte byte, nextByte byte, source string) (token.TokenType, byte, string) {
+	switch currByte {
+	case ' ':
+		l.advance(1)
+		return token.SPACE, currByte, "<SPACE>"
+	case '\t':
+		l.advance(1)
+		return token.TAB, currByte, "\\t"
+	case '\r':
+		l.advance(1)
+		return token.CARRIAGE_RETURN, currByte, "\\r"
+	case '\n':
+		l.advance(1)
+		l.LineNo += 1
+		return token.NEW_LINE, currByte, "null"
+	case '(':
+		l.advance(1)
+		return token.LEFT_PAREN, currByte, "null"
+	case ')':
+		l.advance(1)
+		return token.RIGHT_PAREN, currByte, "null"
+	case '{':
+		l.advance(1)
+		return token.LEFT_BRACE, currByte, "null"
+	case '}':
+		l.advance(1)
+		return token.RIGHT_BRACE, currByte, "null"
+	case ',':
+		l.advance(1)
+		return token.COMMA, currByte, "null"
+	case '.':
+		l.advance(1)
+		return token.DOT, currByte, "null"
+	case '=':
+		if nextByte == '=' {
+			l.advance(2)
+			return token.EQUAL_EQUAL, currByte, "null"
 		}
-		return c, token.EQUAL, "EQUAL", 1
-	case "!":
-		if nc == "=" {
-			return "!=", token.BANG_EQUAL, "BANG_EQUAL", 2
+		l.advance(1)
+		return token.EQUAL, currByte, "null"
+	case '!':
+		if nextByte == '!' {
+			l.advance(2)
+			return token.BANG_EQUAL, currByte, "null"
 		}
-		return c, token.BANG, "BANG", 1
-	case ">":
-		if nc == "=" {
-			return ">=", token.GREATER_EQUAL, "GREATER_EQUAL", 2
+		l.advance(1)
+		return token.BANG, currByte, "null"
+	case '>':
+		if nextByte == '=' {
+			l.advance(2)
+			return token.GREATER_EQUAL, currByte, "null"
 		}
-		return ">", token.GREATER, "GREATER", 1
-	case "<":
-		if nc == "=" {
-			return "<=", token.LESS_EQUAL, "LESS_EQUAL", 2
+		l.advance(1)
+		return token.GREATER, currByte, "null"
+	case '<':
+		if nextByte == '=' {
+			l.advance(2)
+			return token.LESS_EQUAL, currByte, "null"
 		}
-		return "<", token.LESS, "LESS", 1
-	case "+":
-		return c, token.PLUS, "PLUS", 1
-	case "-":
-		return c, token.MINUS, "MINUS", 1
-	case ";":
-		return c, token.SEMI_COLON, "SEMI_COLON", 1
-	case "/":
-		// skip until new line is found
-		if nc == "/" {
-			skipCount := 0
-			idx := currIdx
-			for {
-				s := string(str[idx])
-				if s == "\n" {
-					break
-				}
-				idx++
-				skipCount++
-			}
-
-			return "", token.NULL, "", uint(skipCount)
+		l.advance(1)
+		return token.LESS, currByte, "null"
+	case '+':
+		l.advance(1)
+		return token.PLUS, currByte, "null"
+	case '-':
+		l.advance(1)
+		return token.MINUS, currByte, "null"
+	case ';':
+		l.advance(1)
+		return token.SEMI_COLON, currByte, "null"
+	case '/':
+		if nextByte == '/' {
+			l.scanComment()
+			return token.NULL, 0, "null"
 		}
-		return c, token.SLASH, "SLASH", 1
-	case "*":
-		return c, token.STAR, "STAR", 1
+		l.advance(1)
+		return token.SLASH, currByte, "null"
+	case '*':
+		l.advance(1)
+		return token.STAR, currByte, "null"
 	default:
-		fmt.Printf("[line %d] Error: Unexpected character: %s\n", l.lineNo, c)
+		fmt.Printf("[line %d] Error: Unexpected character: %b\n", l.LineNo, currByte)
 		l.ExitCode = 65
-		return c, token.NULL, "", 1
+		l.advance(1)
+		return token.NULL, currByte, ""
+	}
+}
+
+func (l *Lexer) scanString() {
+
+}
+
+func (l *Lexer) peek() byte {
+	if l.isAtEnd() {
+		return 0
+	}
+
+	return l.Source[l.CurrIdx]
+}
+
+func (l *Lexer) advance(num int) {
+	if l.CurrIdx+num > len(l.Source) {
+		panic(fmt.Sprintf("cannot advance by `%d` due to index out of range", num))
+	} else {
+		l.CurrIdx += num
+	}
+}
+
+func (l *Lexer) isAtEnd() bool {
+	return l.CurrIdx >= len(l.Source)
+}
+
+func (l *Lexer) scanComment() {
+	for {
+		s := l.peek()
+		if l.isAtEnd() {
+			break
+		}
+
+		if s == '\n' {
+			l.LineNo++
+			l.advance(1)
+			break
+		}
+		l.advance(1)
 	}
 }
 
 func (l *Lexer) Display() {
 	for _, t := range l.tokens {
-		fmt.Printf("%s %s %s\n", t.KindValue, t.Lex, t.Literal)
+		fmt.Printf("%s %s %s\n", t.Kind, t.Lex, t.Literal)
 	}
 
 	fmt.Println("EOF  null")
 }
+
+// this will return the length of the comment so that we can skip that amount in scanning/lexing

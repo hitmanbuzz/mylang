@@ -22,16 +22,18 @@ func main() {
 		return
 	}
 
-	d := string(data)
-	var idx uint = 0
+	source := string(data)
+	lexer.Source = source
+	idx := 0
 
 	for {
-		if idx+1 <= uint(len(d))-1 {
-			jump := lexer.Tokenize(string(d[idx]), idx, d)
-			idx += jump
+		if idx+1 <= len(source)-1 {
+			idx = lexer.Tokenize()
 		} else {
 			break
 		}
+
+		lexer.CurrIdx = idx
 	}
 
 	lexer.Display()
