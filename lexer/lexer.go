@@ -3,6 +3,7 @@ package lexer
 import (
 	"fmt"
 	"mylang/token"
+	"mylang/utils"
 )
 
 type Lexer struct {
@@ -23,123 +24,120 @@ func NewLexer() *Lexer {
 }
 
 func (l *Lexer) Tokenize() int {
-	nt := token.Token{
-		Kind:    token.NULL,
-		Lex:     []byte{},
-		Literal: "",
-	}
-
 	nextByte := l.Source[l.CurrIdx+1]
-	kind, lex, literal := l.MatchToken(l.CurrIdx, l.peek(), nextByte, l.Source)
-	if kind != token.NULL {
-		nt.Lex = append(nt.Lex, lex)
-		nt.Kind = kind
-		nt.Literal = literal
-		l.tokens = append(l.tokens, nt)
-	}
-
+	l.MatchToken(l.CurrIdx, l.peek(), nextByte, l.Source)
 	return l.CurrIdx
 }
 
 // @return
 //
-// 1st -> TokenType
+// 1st -> TokenKind
 //
 // 2nd  -> Lex
 //
 // 3rd  -> Literal
 //
 // The 4th return value is the number of indices to skip from the current char.
-func (l *Lexer) MatchToken(currIdx int, currByte byte, nextByte byte, source string) (token.TokenKind, byte, string) {
+func (l *Lexer) MatchToken(currIdx int, currByte byte, nextByte byte, source string) {
 	switch currByte {
 	case ' ':
+		l.AddToken(token.SPACE, utils.ToByteArr(currByte), "<SPACE>")
 		l.advance(1)
-		return token.SPACE, currByte, "<SPACE>"
 	case '\t':
+		l.AddToken(token.SPACE, utils.ToByteArr(currByte), "\\t")
 		l.advance(1)
-		return token.TAB, currByte, "\\t"
 	case '\r':
+		l.AddToken(token.CARRIAGE_RETURN, utils.ToByteArr(currByte), "\\r")
 		l.advance(1)
-		return token.CARRIAGE_RETURN, currByte, "\\r"
 	case '\n':
+		l.AddToken(token.NEW_LINE, utils.ToByteArr(currByte), "null")
 		l.advance(1)
-		l.LineNo += 1
-		return token.NEW_LINE, currByte, "null"
+		l.incrementLine()
 	case '(':
+		l.AddToken(token.LEFT_PAREN, utils.ToByteArr(currByte), "null")
 		l.advance(1)
-		return token.LEFT_PAREN, currByte, "null"
 	case ')':
+		l.AddToken(token.RIGHT_PAREN, utils.ToByteArr(currByte), "null")
 		l.advance(1)
-		return token.RIGHT_PAREN, currByte, "null"
 	case '{':
+		l.AddToken(token.LEFT_BRACE, utils.ToByteArr(currByte), "null")
 		l.advance(1)
-		return token.LEFT_BRACE, currByte, "null"
 	case '}':
+		l.AddToken(token.RIGHT_BRACE, utils.ToByteArr(currByte), "null")
 		l.advance(1)
-		return token.RIGHT_BRACE, currByte, "null"
 	case ',':
+		l.AddToken(token.COMMA, utils.ToByteArr(currByte), "null")
 		l.advance(1)
-		return token.COMMA, currByte, "null"
 	case '.':
+		l.AddToken(token.DOT, utils.ToByteArr(currByte), "null")
 		l.advance(1)
-		return token.DOT, currByte, "null"
 	case '=':
 		if nextByte == '=' {
 			l.advance(2)
-			return token.EQUAL_EQUAL, currByte, "null"
+			l.AddToken(token.EQUAL_EQUAL, utils.ToByteArr(currByte), "null")
+		} else {
+			l.AddToken(token.EQUAL, utils.ToByteArr(currByte), "null")
+			l.advance(1)
 		}
-		l.advance(1)
-		return token.EQUAL, currByte, "null"
 	case '!':
-		if nextByte == '!' {
+		if nextByte == '=' {
+			l.AddToken(token.BANG_EQUAL, utils.ToByteArr(currByte), "null")
 			l.advance(2)
-			return token.BANG_EQUAL, currByte, "null"
+		} else {
+			l.AddToken(token.BANG, utils.ToByteArr(currByte), "null")
+			l.advance(1)
 		}
-		l.advance(1)
-		return token.BANG, currByte, "null"
 	case '>':
 		if nextByte == '=' {
+			l.AddToken(token.GREATER_EQUAL, utils.ToByteArr(currByte), "null")
 			l.advance(2)
-			return token.GREATER_EQUAL, currByte, "null"
+		} else {
+			l.AddToken(token.GREATER, utils.ToByteArr(currByte), "null")
+			l.advance(1)
 		}
-		l.advance(1)
-		return token.GREATER, currByte, "null"
 	case '<':
 		if nextByte == '=' {
+			l.AddToken(token.LESS_EQUAL, utils.ToByteArr(currByte), "null")
 			l.advance(2)
-			return token.LESS_EQUAL, currByte, "null"
+		} else {
+			l.AddToken(token.LESS, utils.ToByteArr(currByte), "null")
+			l.advance(1)
 		}
-		l.advance(1)
-		return token.LESS, currByte, "null"
 	case '+':
+		l.AddToken(token.PLUS, utils.ToByteArr(currByte), "null")
 		l.advance(1)
-		return token.PLUS, currByte, "null"
 	case '-':
+		l.AddToken(token.MINUS, utils.ToByteArr(currByte), "null")
 		l.advance(1)
-		return token.MINUS, currByte, "null"
 	case ';':
+		l.AddToken(token.SEMI_COLON, utils.ToByteArr(currByte), "null")
 		l.advance(1)
-		return token.SEMI_COLON, currByte, "null"
 	case '/':
 		if nextByte == '/' {
 			l.scanComment()
-			return token.NULL, 0, "null"
+		} else {
+			l.AddToken(token.SLASH, utils.ToByteArr(currByte), "null")
+			l.advance(1)
 		}
-		l.advance(1)
-		return token.SLASH, currByte, "null"
+	case '"':
+		isString := l.scanString()
+		if !isString {
+			// todo
+		}
 	case '*':
+		l.AddToken(token.STAR, utils.ToByteArr(currByte), "null")
 		l.advance(1)
-		return token.STAR, currByte, "null"
 	default:
 		fmt.Printf("[line %d] Error: Unexpected character: %b\n", l.LineNo, currByte)
 		l.ExitCode = 65
 		l.advance(1)
-		return token.NULL, currByte, ""
 	}
 }
 
-func (l *Lexer) scanString() {
+func (l *Lexer) scanString() bool {
+	isString := false
 
+	return isString
 }
 
 func (l *Lexer) peek() byte {
@@ -162,6 +160,11 @@ func (l *Lexer) isAtEnd() bool {
 	return l.CurrIdx >= len(l.Source)
 }
 
+// Increment the Line No. Counter
+func (l *Lexer) incrementLine() {
+	l.LineNo++
+}
+
 func (l *Lexer) scanComment() {
 	for {
 		s := l.peek()
@@ -170,12 +173,20 @@ func (l *Lexer) scanComment() {
 		}
 
 		if s == '\n' {
-			l.LineNo++
+			l.incrementLine()
 			l.advance(1)
 			break
 		}
 		l.advance(1)
 	}
+}
+
+func (l *Lexer) AddToken(kind token.TokenKind, lex []byte, literal string) {
+	l.tokens = append(l.tokens, token.Token{
+		Kind:    kind,
+		Lex:     lex,
+		Literal: literal,
+	})
 }
 
 func (l *Lexer) Display() {
@@ -185,5 +196,3 @@ func (l *Lexer) Display() {
 
 	fmt.Println("EOF  null")
 }
-
-// this will return the length of the comment so that we can skip that amount in scanning/lexing
