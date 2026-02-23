@@ -58,10 +58,10 @@ func (l *Lexer) scanNumber() []byte {
 
 		nextByte := l.Source[l.CurrIdx+1]
 
-		if utils.IsByteContain(utils.NUM_ARR, l.peek()) {
+		if utils.IsNum(l.peek()) {
 			nums = append(nums, l.peek())
 			isNumberStart = true
-		} else if l.peek() == '.' && utils.IsByteContain(utils.NUM_ARR, nextByte) && !isDot && isNumberStart {
+		} else if l.peek() == '.' && utils.IsNum(nextByte) && !isDot && isNumberStart {
 			isDot = true
 			nums = append(nums, l.peek())
 		} else {
@@ -74,6 +74,12 @@ func (l *Lexer) scanNumber() []byte {
 		}
 
 		l.advance(1)
+	}
+
+	lastB := nums[len(nums)-1]
+	if lastB != '.' {
+		nums = append(nums, '.')
+		nums = append(nums, '0')
 	}
 
 	return nums

@@ -33,7 +33,7 @@ func (l *Lexer) MatchToken(nextByte byte) {
 	currByte := l.peek()
 
 	// check if the byte is a number
-	if utils.IsByteContain(utils.NUM_ARR, l.peek()) {
+	if utils.IsNum(l.peek()) {
 		nums := l.scanNumber()
 		l.addToken(token.NUMBER, nums, string(nums))
 		return
