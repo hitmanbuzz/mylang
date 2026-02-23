@@ -28,11 +28,6 @@ func (l *Lexer) isAtEnd() bool {
 	return l.CurrIdx >= len(l.Source)
 }
 
-// Increment the Line No. Counter
-func (l *Lexer) incrementLine() {
-	l.LineNo++
-}
-
 // Add new token based on the given parameters data
 func (l *Lexer) addToken(kind token.TokenKind, lex []byte, literal string) {
 	l.tokens = append(l.tokens, token.Token{
@@ -52,7 +47,7 @@ func (l *Lexer) Display() {
 			continue
 		case token.CARRIAGE_RETURN:
 			continue
-		case token.STRING:
+		case token.STRING, token.NUMBER:
 			fmt.Printf("%s \"%s\" %s\n", t.Kind, t.Lex, t.Literal)
 		default:
 			fmt.Printf("%s %s %s\n", t.Kind, t.Lex, t.Literal)

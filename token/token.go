@@ -23,6 +23,7 @@ const (
 	GREATER         TokenKind = "GREATER"
 	SLASH           TokenKind = "SLASH"
 	STRING          TokenKind = "STRING"
+	NUMBER          TokenKind = "NUMBER"
 	NEW_LINE        TokenKind = "NEW_LINE"
 	TAB             TokenKind = "TAB"
 	CARRIAGE_RETURN TokenKind = "CARRIAGE_RETURN"

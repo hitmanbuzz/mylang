@@ -1,14 +1,17 @@
 package lexer
 
+import (
+	"mylang/utils"
+)
+
 func (l *Lexer) scanComment() {
 	for {
-		s := l.peek()
 		if l.isAtEnd() {
 			break
 		}
 
-		if s == '\n' {
-			l.incrementLine()
+		if l.peek() == '\n' {
+			l.Line++
 			l.advance(1)
 			break
 		}
@@ -19,15 +22,9 @@ func (l *Lexer) scanComment() {
 func (l *Lexer) scanString() ([]byte, bool) {
 	isString := false
 	var str []byte
-	skip := 0
+	l.advance(1)
 
 	for {
-		if skip == 0 {
-			l.advance(1)
-			skip++
-			continue
-		}
-
 		if l.isAtEnd() {
 			break
 		}
@@ -35,18 +32,49 @@ func (l *Lexer) scanString() ([]byte, bool) {
 		if l.peek() == '"' {
 			isString = true
 			l.advance(1)
-			skip++
 			break
 		}
 
 		if l.peek() == '\n' {
-			l.incrementLine()
+			l.Line++
 		}
 
 		str = append(str, l.peek())
 		l.advance(1)
-		skip++
 	}
 
 	return str, isString
+}
+
+func (l *Lexer) scanNumber() []byte {
+	var nums []byte
+	isDot := false
+	isNumberStart := false
+
+	for {
+		if l.isAtEnd() || l.peek() == '\n' {
+			break
+		}
+
+		nextByte := l.Source[l.CurrIdx+1]
+
+		if utils.IsByteContain(utils.NUM_ARR, l.peek()) {
+			nums = append(nums, l.peek())
+			isNumberStart = true
+		} else if l.peek() == '.' && utils.IsByteContain(utils.NUM_ARR, nextByte) && !isDot && isNumberStart {
+			isDot = true
+			nums = append(nums, l.peek())
+		} else {
+			isNumberStart = false
+			break
+		}
+
+		if l.peek() == '\n' {
+			l.Line++
+		}
+
+		l.advance(1)
+	}
+
+	return nums
 }
